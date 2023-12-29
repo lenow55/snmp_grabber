@@ -3,6 +3,7 @@ from threading import Event
 import concurrent.futures as concurent_f
 from io import BytesIO
 import subprocess
+from typing import List
 from pyarrow import Table, csv, unify_schemas
 
 
@@ -35,46 +36,54 @@ class snmpDaemon(Thread):
                     future_to_url, timeout=15):
                 table_name = future_to_url[future]
                 try:
-                    print('%r check this table' % table_name)
+                    print('%r check this table' %
+                          table_name)
                     data = future.result()
                     print("Get resulted bytes")
-                    print(data)
                 except Exception as exc:
                     print(
                         '%r generated an exception: %s' %
                         (table_name, exc))
-                    raise Exception("Can't initialize daemon")
+                    raise Exception(
+                        "Can't initialize daemon")
                 else:
+                    print(data.getvalue())
+                    temp_table: Table = csv.read_csv(
+                        data,
+                        read_options=csv.ReadOptions(skip_rows=2)
+                    )
                     if table_name == "if_table":
-                        temp_table: Table = csv.read_csv(data)
                         self.if_table_schema = temp_table.schema
                     elif table_name == "if_x_table":
-                        temp_table: Table = csv.read_csv(data)
                         self.if_x_table_schema = temp_table.schema
 
             self.schema = unify_schemas(
-                    self.if_table_schema,
-                    self.if_x_table_schema)
+                self.if_table_schema,
+                self.if_x_table_schema)
             self._initialized = True
             print("Result schema")
             print(self.schema)
 
-
-    def _get_table(self, table_oid) -> BytesIO:
+    def _get_table(self, table_oid: str) -> BytesIO:
         """
         Вход:
             table_oid: должен быть oid таблицы, иначе snmp вернёт ошибку
         """
         result: BytesIO = BytesIO()
-        command = f"snmptable -t {self._timeout_snmp} \
-                -v2c -c sec -Cf , -Cr {self.batch_download_size} \
-                {self.snmp_agent_ip} {table_oid}"
+        commands: List[str] = [
+            "snmptable",
+            "-t", str(self._timeout_snmp),
+            "-v2c", "-c", "sec", "-Cf", ",",
+            "-Cr", str(self.batch_download_size),
+            self.snmp_agent_ip, table_oid
+        ]
         # Выполняем команду в системном шелле
         try:
             process = subprocess.run(
-                command,
+                commands,
                 check=True,
-                timeout=self._timeout_snmp_subprocess)
+                timeout=self._timeout_snmp_subprocess,
+                capture_output=True)
             result.write(process.stdout)
         except subprocess.CalledProcessError as e:
             raise Exception(
@@ -82,4 +91,5 @@ class snmpDaemon(Thread):
         except subprocess.TimeoutExpired as e:
             raise Exception(
                 f"Процесс опроса snmp завершён по таймауту {e}")
+        result.seek(0)
         return result
