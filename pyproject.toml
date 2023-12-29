@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "snmp-grabber"
+version = "0.1.0"
+description = "Код для считывания данных snmp и оформления их во временной ряд"
+authors = ["Новиков Илья <nov.ilucha@yandex.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pyarrow = "^14.0.2"
+pyahocorasick = "^2.0.0"
+
+[tool.poetry.group.dev.dependencies]
+autopep8 = "^2.0.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

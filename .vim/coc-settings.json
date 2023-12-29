@@ -1,0 +1,10 @@
+{
+    "python.venvPath": ".venv/",
+    "python.formatting.provider": "autopep8",
+    "python.formatting.autopep8Path": ".venv/bin/autopep8",
+    "python.formatting.autopep8Args": [
+        "--max-line-length",
+        "60",
+        "--experimental"
+    ]
+}
