@@ -29,6 +29,7 @@ class snmpDaemon(Thread):
             self._timeout_snmp * 2)
         self._if_table_oid: str = "1.3.6.1.2.1.2.2"
         self._if_x_table_oid: str = "1.3.6.1.2.1.31.1.1"
+        self._date_oid: str = "1.3.6.1.4.1.34849.1.1.1.3.12.0"
         self.writers = []
         self.counter_flush:int = 0
         Thread.__init__(self)
@@ -46,7 +47,7 @@ class snmpDaemon(Thread):
                 executor.submit(
                     self._get_table, self._if_x_table_oid): "if_x_table",
                 executor.submit(
-                    self._get_table, self._if_x_table_oid): "dataTime"
+                    self._get_value, self._date_oid): "dataTime"
             }
             logger.debug("start wait treads")
             for future in concurent_f.as_completed(
@@ -65,14 +66,17 @@ class snmpDaemon(Thread):
                     raise Exception(
                         "Can't initialize daemon")
                 else:
-                    temp_table: Table = csv.read_csv(
-                        data, read_options=csv.ReadOptions(
-                            skip_rows=2))
                     if future_name == "if_table":
+                        temp_table: Table = csv.read_csv(
+                            data, read_options=csv.ReadOptions(
+                                skip_rows=2))
                         self.if_table_schema = temp_table.schema
                         counts_list.append(
                             temp_table.num_rows)
                     elif future_name == "if_x_table":
+                        temp_table: Table = csv.read_csv(
+                            data, read_options=csv.ReadOptions(
+                                skip_rows=2))
                         self.if_x_table_schema = temp_table.schema
                         counts_list.append(
                             temp_table.num_rows)
@@ -84,7 +88,7 @@ class snmpDaemon(Thread):
             self.if_x_table_schema
         ])
         for value_name in temp_values:
-            self.schema.append(
+            self.schema = self.schema.append(
                 pyarrow.field(
                     value_name, pyarrow.string()))
         if not all(x == counts_list[0]
@@ -205,6 +209,7 @@ class snmpDaemon(Thread):
             except Exception as e:
                 logger.error(f"Error occure: {e}")
                 count_errors += 1
+                raise e
 
         if count_errors == 10:
             logger.error("Too many errors")
@@ -223,7 +228,7 @@ class snmpDaemon(Thread):
                 executor.submit(
                     self._get_table, self._if_x_table_oid): "if_x_table",
                 executor.submit(
-                    self._get_table, self._if_x_table_oid): "dataTime"
+                    self._get_value, self._date_oid): "dataTime"
             }
             logger.debug("start wait requests treads")
             for future in concurent_f.as_completed(
@@ -251,7 +256,7 @@ class snmpDaemon(Thread):
                              })
                     else:
                         value: str = data.getvalue(
-                        ).decode().split(' ')[-1]
+                        ).decode().split(' ',1)[-1].strip('"\n')
                         temp_values.update(
                             {future_name: value})
 
@@ -263,7 +268,7 @@ class snmpDaemon(Thread):
         for name, value in temp_values.items():
             arr = pyarrow.array(
                 # дублирую значения, чтобы в каждой строчке оказались
-                [value for i in self._count_interfaces],
+                [value for i in range(self._count_interfaces)],
                 type=pyarrow.string())
             out_table = out_table.append_column(name, arr)
 
