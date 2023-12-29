@@ -39,7 +39,7 @@ class snmpDaemon(Thread):
                     print('%r check this table' %
                           table_name)
                     data = future.result()
-                    print("Get resulted bytes")
+                    print("Get resulted bytes success")
                 except Exception as exc:
                     print(
                         '%r generated an exception: %s' %
@@ -47,7 +47,6 @@ class snmpDaemon(Thread):
                     raise Exception(
                         "Can't initialize daemon")
                 else:
-                    print(data.getvalue())
                     temp_table: Table = csv.read_csv(
                         data, read_options=csv.ReadOptions(
                             skip_rows=2))
@@ -61,7 +60,7 @@ class snmpDaemon(Thread):
                 self.if_x_table_schema
             ])
             self._initialized = True
-            print("Result schema")
+            print("Resulted schema")
             print(self.schema)
 
     def _get_table(self, table_oid: str) -> BytesIO:
