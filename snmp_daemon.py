@@ -5,7 +5,7 @@ from io import BytesIO
 import subprocess
 import os
 from typing import List
-from pyarrow import Schema, Table, concat_tables, csv, unify_schemas
+from pyarrow import Schema, Table, csv, unify_schemas
 from pyarrow import parquet as pa_pq
 from time import sleep
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class snmpDaemon(Thread):
     def __init__(self, snmp_agent_ip: str,
                  ask_interval: int, timeout_exit: int):
-        self._stop = Event()
+        self._stop_event = Event()
         self._initialized_schema: bool = False
         self._initialized_writers: bool = False
         self.snmp_agent_ip: str = snmp_agent_ip
@@ -29,6 +29,7 @@ class snmpDaemon(Thread):
         self._if_table_oid: str = "1.3.6.1.2.1.2.2"
         self._if_x_table_oid: str = "1.3.6.1.2.1.31.1.1"
         self.writers = []
+        Thread.__init__(self)
 
     def initialize_first_request(self) -> Schema:
         counts_list = []
@@ -130,16 +131,16 @@ class snmpDaemon(Thread):
         return result
 
     def shutdown(self):
-        self._stop.set()
+        self._stop_event.set()
         for writer in self.writers:
             writer.close()
         logger.debug("Writers are closed")
 
     def run(self):
-        timer: int = 0
-        temp_wait_interval: int = self._check_exit_interval
+        timer: int = self.ask_interval
+        temp_wait_interval: int = 0
         count_errors: int = 0
-        while not self._stop.is_set() and count_errors < 10:
+        while not self._stop_event.is_set() and count_errors < 10:
             # Блок выжидания
             sleep(temp_wait_interval)
             timer = timer + temp_wait_interval
@@ -153,6 +154,7 @@ class snmpDaemon(Thread):
                 temp_wait_interval = self._check_exit_interval
 
             # Блок работы
+            logger.debug("Process task")
             try:
                 table: Table = self.request()
                 self.store_results(table)
@@ -163,12 +165,12 @@ class snmpDaemon(Thread):
 
         if count_errors == 10:
             logger.error("Too many errors")
-        if self._stop.is_set():
+        if self._stop_event.is_set():
             logger.info(
                 "KeyboardInterrupt detected, closing background thread. ")
 
     def request(self) -> Table:
-        temp_tables = []
+        temp_tables = {}
         with concurent_f.ThreadPoolExecutor(max_workers=5) as executor:
             # Start the load operations and mark each future with its URL
             future_to_url = {
@@ -194,17 +196,25 @@ class snmpDaemon(Thread):
                     raise Exception(
                         f"Error with request table {table_name}")
                 else:
-                    temp_tables.append(csv.read_csv(
-                        data, read_options=csv.ReadOptions(
-                            skip_rows=2))
-                    )
+                    temp_tables.update(
+                        {table_name: csv.read_csv(
+                            data,
+                            read_options=csv.ReadOptions(
+                                skip_rows=2))
+                         })
+        out_table = temp_tables["if_table"]
+        for name, col in zip(
+                temp_tables["if_x_table"].column_names,
+                temp_tables["if_x_table"].columns):
+            out_table = out_table.append_column(name, col)
 
-        return concat_tables(temp_tables)
+        return out_table
 
     def store_results(self, table: Table):
         batches = table.to_batches(1)
         if len(batches) != self._count_interfaces:
-            raise Exception("Неправильное количество батчей")
+            raise Exception(
+                "Неправильное количество батчей")
         for index, batch in enumerate(batches):
             self.writers[index].write_batch(batch)
-
+        logger.info("data flushed")
