@@ -39,12 +39,12 @@ def validate_ip_address(address: str) -> str:
 
 parser: ArgumentParser = ArgumentParser(
     prog='batch_write_utils.py')
-parser.add_argument("-p",
-                    "--path",
-                    type=str,
-                    required=True,
-                    default="",
-                    help="путь до csv файлика")
+#parser.add_argument("-p",
+#                    "--path",
+#                    type=str,
+#                    required=True,
+#                    default="",
+#                    help="путь до csv файлика")
 parser.add_argument(
     "-o",
     "--output",
@@ -60,7 +60,6 @@ parser.add_argument(
 parser.add_argument(
     "agent_ip",
     type=validate_ip_address,
-    required=True,
     help="ip узла snmp")
 # args = parser.parse_args()
 #
