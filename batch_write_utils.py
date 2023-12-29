@@ -10,11 +10,6 @@ from pathlib import Path
 
 from snmp_daemon import snmpDaemon
 
-# parser: ArgumentParser = ArgumentParser(prog='gamma_n.py')
-# parser.add_argument("mode",
-#                    type=str,
-#                    choices=["encrypt","decrypt"],
-#                    help="Указывает тип выполняемой операции")
 def check_range_timedelta(value):
     ivalue = int(value)
     if ivalue < 60 or ivalue > 3600:
@@ -61,14 +56,6 @@ parser.add_argument(
     "agent_ip",
     type=validate_ip_address,
     help="ip узла snmp")
-# args = parser.parse_args()
-#
-#
-# with open(args.path, 'r') as file:
-#    lines = file.readlines()
-#
-# result = extract_values_from_log(lines)
-# result.to_csv(args.output, index=False)  # Преобразование DataFrame в файл CSV
 
 if __name__ == '__main__':
     args = parser.parse_args()
