@@ -49,17 +49,17 @@ class snmpDaemon(Thread):
                 else:
                     print(data.getvalue())
                     temp_table: Table = csv.read_csv(
-                        data,
-                        read_options=csv.ReadOptions(skip_rows=2)
-                    )
+                        data, read_options=csv.ReadOptions(
+                            skip_rows=2))
                     if table_name == "if_table":
                         self.if_table_schema = temp_table.schema
                     elif table_name == "if_x_table":
                         self.if_x_table_schema = temp_table.schema
 
-            self.schema = unify_schemas(
+            self.schema = unify_schemas([
                 self.if_table_schema,
-                self.if_x_table_schema)
+                self.if_x_table_schema
+            ])
             self._initialized = True
             print("Result schema")
             print(self.schema)
