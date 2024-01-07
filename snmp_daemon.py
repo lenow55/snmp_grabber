@@ -5,8 +5,8 @@ from io import BytesIO
 import subprocess
 import os
 from typing import List
-from pyarrow import Schema, Table, csv, unify_schemas
-from pyarrow import parquet as pa_pq
+from pyarrow import Schema, Table, unify_schemas
+from pyarrow import csv
 import pyarrow
 from time import sleep
 
@@ -106,8 +106,8 @@ class snmpDaemon(Thread):
             logger.info(f"Папка уже существует: {e}")
         for index in range(0, self._count_interfaces):
             self.writers.append(
-                pa_pq.ParquetWriter(os.path.join(
-                    dirname, f"interface_{index}.parquet"),
+                csv.CSVWriter(os.path.join(
+                    dirname, f"interface_{index}.csv"),
                     self.schema)
             )
         self._initialized_writers = True
