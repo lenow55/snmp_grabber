@@ -1,16 +1,10 @@
-import logger as logger_mod
-
 from argparse import ArgumentParser, ArgumentTypeError
-# from ahocorasic_parser import SNMP_Parser_AHOCK
 import pyarrow
 from time import sleep
-from snmp_daemon import snmpDaemon
 
 import sys
 import os
 
-import logging
-logger = logging.getLogger(__name__)
 
 TIMEOUT = 10
 
@@ -38,7 +32,6 @@ def validate_ip_address(address: str) -> str:
             raise ArgumentTypeError(
                 "IP address {} is not valid".format(address))
 
-    print("IP address {} is valid".format(address))
     return address
 
 
@@ -69,34 +62,42 @@ parser.add_argument(
 
 def main(argv):
     args = parser.parse_args()
+    from logger import conf_logger
+    conf_logger(args.debug)
+
+    import logging
+    logger = logging.getLogger(__name__)
+
+    from snmp_daemon import snmpDaemon
     snmp_daemon = snmpDaemon(args.agent_ip, args.timedelta, TIMEOUT)
     try:
         check_schema: pyarrow.Schema = snmp_daemon.initialize_first_request()
     except Exception as e:
         logger.fatal(f"Can't init daemon with {e}")
         return 1
-    print("This schema will be used")
-    print(check_schema)
+    logger.debug("This schema will be used")
+    logger.debug(check_schema)
     check_count_interfaces: int = snmp_daemon.initialize_writers(
         args.output)
-    print(f"Будет получена информация\
+    logger.info(f"Будет получена информация\
             о {check_count_interfaces} интерфейсах")
 
     snmp_daemon.start()
     try:
         while snmp_daemon.is_alive():
-            sleep(300)
+            sleep(600)
     except KeyboardInterrupt:
         snmp_daemon.shutdown()
         snmp_daemon.join(TIMEOUT)
         if snmp_daemon.is_alive():
-            print("Background thread timed out. Closing all threads")
+            logger.info("Background thread timed out. Closing all threads")
             os._exit(getattr(os, "_exitcode", 0))
         else:
-            print("Background thread finished processing. Closing all threads")
+            logger.info("Background thread finished processing. Closing all threads")
             sys.exit(getattr(os, "_exitcode", 0))
     print("Thread finished, exiting")
     snmp_daemon.shutdown()
     return 0
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

@@ -205,6 +205,7 @@ class snmpDaemon(Thread):
             try:
                 table: Table = self.request()
                 self.store_results(table)
+                del table
 
             except Exception as e:
                 logger.error(f"Error occure: {e}")
@@ -282,4 +283,6 @@ class snmpDaemon(Thread):
         for index, batch in enumerate(batches):
             self.writers[index].write_batch(batch)
         self.counter_flush += 1
-        logger.info(f"data flushed #{self.counter_flush}")
+        logger.debug(f"data flushed #{self.counter_flush}")
+        if self.counter_flush % 10 == 0:
+            logger.info(f"data flushed #{self.counter_flush}")
