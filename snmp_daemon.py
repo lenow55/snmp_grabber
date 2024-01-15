@@ -194,7 +194,7 @@ class snmpDaemon(Thread):
     def run(self):
         logger.debug("Start Run")
         relateve_error_interval: int = self.ask_interval
-        timer: int = self.ask_interval - self._check_exit_interval
+        timer: int = 2
         temp_wait_interval: int = relateve_error_interval - timer
         count_errors: int = 0
         while not self._stop_event.is_set():
@@ -212,6 +212,7 @@ class snmpDaemon(Thread):
 
             # Блок работы
             logger.debug("Process task")
+            # сохраняю время когда начался процесс
             request_time = datetime.utcnow()
             try:
                 table: Table = self.request(request_time)
@@ -232,6 +233,11 @@ class snmpDaemon(Thread):
                     logger.error("Too many errors")
                     self._stop_event.set()
                     break
+            
+            # время окончания запроса
+            end_time = datetime.now()
+            timer = int((end_time - request_time).total_seconds())
+
 
         if self._stop_event.is_set():
             logger.info(
@@ -263,7 +269,6 @@ class snmpDaemon(Thread):
     def request(self, request_time: datetime) -> Table:
         temp_tables = {}
         temp_values = {}
-        temp_values.update({date_on_host_NAME: request_time.isoformat()})
         with concurent_f.ThreadPoolExecutor(max_workers=5) as executor:
             # Start the load operations and mark each future with its URL
             future_to_oid = {
@@ -315,6 +320,12 @@ class snmpDaemon(Thread):
                 [value for i in range(self._count_interfaces)],
                 type=pyarrow.string())
             out_table = out_table.append_column(name, arr)
+
+        # добавляю время на хосте
+        arr = pyarrow.array(
+                [request_time.isoformat() for i in range(self._count_interfaces)],
+                type=pyarrow.string())
+        out_table = out_table.append_column(date_on_host_NAME, arr)
 
         return out_table
 
