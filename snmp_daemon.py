@@ -88,6 +88,7 @@ class snmpDaemon(Thread):
             self.if_table_schema,
             self.if_x_table_schema
         ])
+
         for value_name in temp_values:
             self.schema = self.schema.append(
                 pyarrow.field(
@@ -98,7 +99,9 @@ class snmpDaemon(Thread):
         for i, type_data in enumerate(self.schema.types):
             logger.debug(f"Field {self.schema.field(i)} datatype {type_data}")
             if type_data == pyarrow.null():
+                logger.debug("Попал в if")
                 self.schema.set(i, self.schema.field(i).with_type(pyarrow.string()))
+
         if not all(x == counts_list[0]
                    for x in counts_list):
             raise Exception(
