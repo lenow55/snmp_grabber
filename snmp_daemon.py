@@ -97,10 +97,8 @@ class snmpDaemon(Thread):
             pyarrow.field(
                 date_on_host_NAME, pyarrow.string()))
         for i, type_data in enumerate(self.schema.types):
-            logger.debug(f"Field {self.schema.field(i)} datatype {type_data}")
             if type_data == pyarrow.null():
-                logger.debug("Попал в if")
-                self.schema.set(i, self.schema.field(i).with_type(pyarrow.string()))
+                self.schema = self.schema.set(i, self.schema.field(i).with_type(pyarrow.string()))
 
         if not all(x == counts_list[0]
                    for x in counts_list):
