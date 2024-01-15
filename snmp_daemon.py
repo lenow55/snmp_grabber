@@ -184,6 +184,7 @@ class snmpDaemon(Thread):
         logger.debug("Writers are closed")
 
     def run(self):
+        relateve_error_interval: int = self.ask_interval
         timer: int = self.ask_interval
         temp_wait_interval: int = 0
         count_errors: int = 0
@@ -191,10 +192,10 @@ class snmpDaemon(Thread):
             # Блок выжидания
             sleep(temp_wait_interval)
             timer = timer + temp_wait_interval
-            if timer < self.ask_interval - temp_wait_interval:
+            if timer < relateve_error_interval - temp_wait_interval:
                 continue
-            elif timer < self.ask_interval:
-                temp_wait_interval = self.ask_interval - timer
+            elif timer < relateve_error_interval:
+                temp_wait_interval = relateve_error_interval - timer
                 continue
             else:
                 timer = 0
@@ -206,11 +207,13 @@ class snmpDaemon(Thread):
                 table: Table = self.request()
                 self.store_results(table)
                 del table
+        
+                relateve_error_interval: int = self.ask_interval
 
             except Exception as e:
                 logger.error(f"Error occure: {e}")
                 count_errors += 1
-                raise e
+                relateve_error_interval = self.ask_interval * (count_errors + 1)
 
         if count_errors == 10:
             logger.error("Too many errors")
