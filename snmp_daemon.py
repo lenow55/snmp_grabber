@@ -9,6 +9,7 @@ from pyarrow import Schema, Table, unify_schemas
 from pyarrow import csv
 import pyarrow
 from time import sleep
+from datetime import datetime
 
 import logging
 logger = logging.getLogger(__name__)
@@ -240,6 +241,7 @@ class snmpDaemon(Thread):
     def request(self) -> Table:
         temp_tables = {}
         temp_values = {}
+        temp_values.update({date_on_host_NAME: datetime.utcnow().isoformat()})
         with concurent_f.ThreadPoolExecutor(max_workers=5) as executor:
             # Start the load operations and mark each future with its URL
             future_to_oid = {
