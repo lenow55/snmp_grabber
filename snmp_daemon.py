@@ -223,7 +223,7 @@ class snmpDaemon(Thread):
 
             except Exception as e:
                 logger.error(f"Error occure: {e}")
-                count_errors += 1
+                count_errors = count_errors + 1
                 relateve_error_interval = self.ask_interval * (count_errors + 1)
                 table: Table = self._gen_stub_values(request_time)
                 self.store_results(table)
@@ -330,6 +330,7 @@ class snmpDaemon(Thread):
         return out_table
 
     def store_results(self, table: Table):
+        logger.debug(f"Table for write {table}")
         batches = table.to_batches(1)
         if len(batches) != self._count_interfaces:
             raise Exception(
