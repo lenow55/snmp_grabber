@@ -238,6 +238,8 @@ class snmpDaemon(Thread):
             
             # время окончания запроса
             end_time = datetime.now()
+            logger.debug(f"Timedelta = {end_time - request_time}")
+
             timer = int((end_time - request_time).total_seconds())
             logger.debug(f"Timers {relateve_error_interval}, {temp_wait_interval}, {timer}")
 
