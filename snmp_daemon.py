@@ -220,7 +220,6 @@ class snmpDaemon(Thread):
                 del table
         
                 relateve_error_interval: int = self.ask_interval
-                logger.debug(f"Timers {relateve_error_interval}, {temp_wait_interval}, {timer}")
 
             except Exception as e:
                 logger.error(f"Error occure: {e}")
@@ -237,11 +236,10 @@ class snmpDaemon(Thread):
                     break
             
             # время окончания запроса
-            end_time = datetime.now()
-            logger.debug(f"Timedelta = {end_time - request_time}")
-
+            end_time = datetime.utcnow()
             timer = int((end_time - request_time).total_seconds())
-            logger.debug(f"Timers {relateve_error_interval}, {temp_wait_interval}, {timer}")
+            if timer < 0:
+                timer = 0
 
 
         if self._stop_event.is_set():
