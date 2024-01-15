@@ -53,6 +53,9 @@ parser.add_argument(
     help="уровень отладочной информации"
 )
 parser.add_argument(
+    "-c", "--check_only", action='store_true',
+    help="Просмотреть схему и выйти")
+parser.add_argument(
     "agent_ip",
     type=validate_ip_address,
     help="ip узла snmp")
@@ -77,6 +80,9 @@ def main(argv):
         return 1
     logger.debug("This schema will be used")
     logger.debug(check_schema)
+    if args.check_only:
+        return 0
+
     check_count_interfaces: int = snmp_daemon.initialize_writers(
         args.output)
     logger.info(f"Будет получена информация\

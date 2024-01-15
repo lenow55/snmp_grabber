@@ -13,6 +13,7 @@ from time import sleep
 import logging
 logger = logging.getLogger(__name__)
 
+date_on_host_NAME = "date_time_on_request"
 
 class snmpDaemon(Thread):
     def __init__(self, snmp_agent_ip: str,
@@ -91,6 +92,12 @@ class snmpDaemon(Thread):
             self.schema = self.schema.append(
                 pyarrow.field(
                     value_name, pyarrow.string()))
+        self.schema = self.schema.append(
+            pyarrow.field(
+                date_on_host_NAME, pyarrow.string()))
+        for i, type_data in self.schema.types:
+            if type_data == pyarrow.null():
+                self.schema.set(i, self.schema.field(i).with_type(pyarrow.string()))
         if not all(x == counts_list[0]
                    for x in counts_list):
             raise Exception(
@@ -108,6 +115,7 @@ class snmpDaemon(Thread):
             os.mkdir(dirname)
         except FileExistsError as e:
             logger.info(f"Папка уже существует: {e}")
+            raise e
         for index in range(0, self._count_interfaces):
             self.writers.append(
                 csv.CSVWriter(os.path.join(
