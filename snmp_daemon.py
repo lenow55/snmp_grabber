@@ -192,6 +192,7 @@ class snmpDaemon(Thread):
         self._stop_event.set()
 
     def run(self):
+        logger.debug("Start Run")
         relateve_error_interval: int = self.ask_interval
         timer: int = self.ask_interval - self._check_exit_interval
         temp_wait_interval: int = 0
