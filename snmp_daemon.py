@@ -330,7 +330,7 @@ class snmpDaemon(Thread):
         return out_table
 
     def store_results(self, table: Table):
-        logger.debug(f"Table for write {table}")
+        logger.debug(f"Table for write {table.to_string()}")
         batches = table.to_batches(1)
         if len(batches) != self._count_interfaces:
             raise Exception(
