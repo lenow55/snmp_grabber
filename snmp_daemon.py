@@ -95,7 +95,7 @@ class snmpDaemon(Thread):
         self.schema = self.schema.append(
             pyarrow.field(
                 date_on_host_NAME, pyarrow.string()))
-        for i, type_data in self.schema.types:
+        for i, type_data in enumerate(self.schema.types):
             if type_data == pyarrow.null():
                 self.schema.set(i, self.schema.field(i).with_type(pyarrow.string()))
         if not all(x == counts_list[0]
