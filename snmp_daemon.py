@@ -211,8 +211,9 @@ class snmpDaemon(Thread):
 
             # Блок работы
             logger.debug("Process task")
+            request_time = datetime.utcnow()
             try:
-                table: Table = self.request()
+                table: Table = self.request(request_time)
                 self.store_results(table)
                 del table
         
@@ -222,6 +223,9 @@ class snmpDaemon(Thread):
                 logger.error(f"Error occure: {e}")
                 count_errors += 1
                 relateve_error_interval = self.ask_interval * (count_errors + 1)
+                table: Table = self._gen_stub_values(request_time)
+                self.store_results(table)
+                del table
 
                 if count_errors == 30:
                     logger.error("Too many errors")
@@ -238,10 +242,27 @@ class snmpDaemon(Thread):
             writer.close()
         logger.debug("Writers are closed")
 
-    def request(self) -> Table:
+    def _gen_stub_values(self, request_time: datetime) -> pyarrow.Table:
+        list_arrays = []
+        for name in self.schema.names:
+            arr = pyarrow.array(
+                # дублирую значения, чтобы в каждой строчке оказались
+                [None] * self._count_interfaces)
+            if name == date_on_host_NAME:
+                arr = pyarrow.array(
+                    # дублирую значения, чтобы в каждой строчке оказались
+                    [request_time.isoformat() for i in range(self._count_interfaces)],
+                    type=pyarrow.string())
+            list_arrays.append(arr)
+
+        out_table = Table.from_arrays(list_arrays, self.schema.names)
+
+        return out_table
+
+    def request(self, request_time: datetime) -> Table:
         temp_tables = {}
         temp_values = {}
-        temp_values.update({date_on_host_NAME: datetime.utcnow().isoformat()})
+        temp_values.update({date_on_host_NAME: request_time.isoformat()})
         with concurent_f.ThreadPoolExecutor(max_workers=5) as executor:
             # Start the load operations and mark each future with its URL
             future_to_oid = {
