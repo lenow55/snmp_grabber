@@ -22,11 +22,11 @@ class snmpDaemon(Thread):
         self._initialized_writers: bool = False
         self.snmp_agent_ip: str = snmp_agent_ip
         self.ask_interval: int = ask_interval
-        self._check_exit_interval: int = timeout_exit - 2
+        self._check_exit_interval: int = timeout_exit - 1
         self.batch_download_size: int = 50
-        self._timeout_snmp: int = 5
-        self._timeout_snmp_subprocess: float = float(
-            self._timeout_snmp * 2)
+        self._timeout_snmp: int = timeout_exit - 3
+        self._timeout_snmp_subprocess: float = float(timeout_exit - 2)
+        self._timeout_snmp_concurent: int = timeout_exit - 1
         self._if_table_oid: str = "1.3.6.1.2.1.2.2"
         self._if_x_table_oid: str = "1.3.6.1.2.1.31.1.1"
         self._date_oid: str = "1.3.6.1.4.1.34849.1.1.1.3.12.0"
@@ -51,7 +51,7 @@ class snmpDaemon(Thread):
             }
             logger.debug("start wait treads")
             for future in concurent_f.as_completed(
-                    future_to_oid, timeout=15):
+                    future_to_oid, timeout=self._timeout_snmp_concurent):
                 future_name = future_to_oid[future]
                 try:
                     logger.debug('%r check this table' %
@@ -179,16 +179,13 @@ class snmpDaemon(Thread):
 
     def shutdown(self):
         self._stop_event.set()
-        for writer in self.writers:
-            writer.close()
-        logger.debug("Writers are closed")
 
     def run(self):
         relateve_error_interval: int = self.ask_interval
-        timer: int = self.ask_interval
+        timer: int = self.ask_interval - self._check_exit_interval
         temp_wait_interval: int = 0
         count_errors: int = 0
-        while not self._stop_event.is_set() and count_errors < 10:
+        while not self._stop_event.is_set():
             # Блок выжидания
             sleep(temp_wait_interval)
             timer = timer + temp_wait_interval
@@ -215,11 +212,20 @@ class snmpDaemon(Thread):
                 count_errors += 1
                 relateve_error_interval = self.ask_interval * (count_errors + 1)
 
-        if count_errors == 10:
-            logger.error("Too many errors")
+                if count_errors == 30:
+                    logger.error("Too many errors")
+                    self._stop_event.set()
+                    break
+
         if self._stop_event.is_set():
             logger.info(
                 "KeyboardInterrupt detected, closing background thread. ")
+            self.close_writers()
+
+    def close_writers(self):
+        for writer in self.writers:
+            writer.close()
+        logger.debug("Writers are closed")
 
     def request(self) -> Table:
         temp_tables = {}
@@ -236,7 +242,7 @@ class snmpDaemon(Thread):
             }
             logger.debug("start wait requests treads")
             for future in concurent_f.as_completed(
-                    future_to_oid, timeout=15):
+                    future_to_oid, timeout=self._timeout_snmp_concurent):
                 future_name = future_to_oid[future]
                 try:
                     logger.debug('%r check this table' %

@@ -5,12 +5,9 @@ from time import sleep
 import sys
 import os
 
-
-TIMEOUT = 10
-
 def check_range_timedelta(value):
     ivalue = int(value)
-    if ivalue < 60 or ivalue > 3600:
+    if ivalue < 5 or ivalue > 3600:
         raise ArgumentTypeError(
             "%s is an invalid positive int value" % value)
     return ivalue
@@ -46,7 +43,7 @@ parser.add_argument(
 parser.add_argument(
     "-t", "--timedelta", type=check_range_timedelta,
     required=False, default=300,
-    help="Время в секундах между повторными запросами от 60 до 1h")
+    help="Время в секундах между повторными запросами от 5sec до 1h")
 parser.add_argument(
     "-d",
     "--debug",
@@ -62,6 +59,9 @@ parser.add_argument(
 
 def main(argv):
     args = parser.parse_args()
+    timeout_exit_process: int = 20
+    if args.timedelta < 21:
+        timeout_exit_process = 4
     from logger import conf_logger
     conf_logger(args.debug)
 
@@ -69,7 +69,7 @@ def main(argv):
     logger = logging.getLogger(__name__)
 
     from snmp_daemon import snmpDaemon
-    snmp_daemon = snmpDaemon(args.agent_ip, args.timedelta, TIMEOUT)
+    snmp_daemon = snmpDaemon(args.agent_ip, args.timedelta, timeout_exit_process)
     try:
         check_schema: pyarrow.Schema = snmp_daemon.initialize_first_request()
     except Exception as e:
@@ -88,9 +88,13 @@ def main(argv):
             sleep(600)
     except KeyboardInterrupt:
         snmp_daemon.shutdown()
-        snmp_daemon.join(TIMEOUT)
+        snmp_daemon.join(timeout_exit_process)
         if snmp_daemon.is_alive():
-            logger.info("Background thread timed out. Closing all threads")
+            snmp_daemon.close_writers()
+            try:
+                logger.info("Background thread timed out. Closing all threads")
+            except Exception as e:
+                logger.error(f"then closing occure {e}")
             os._exit(getattr(os, "_exitcode", 0))
         else:
             logger.info("Background thread finished processing. Closing all threads")
