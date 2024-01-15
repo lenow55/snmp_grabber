@@ -198,6 +198,7 @@ class snmpDaemon(Thread):
         temp_wait_interval: int = 0
         count_errors: int = 0
         while not self._stop_event.is_set():
+            logger.debug(f"Timers {relateve_error_interval}, {timer}, {temp_wait_interval}")
             # Блок выжидания
             sleep(temp_wait_interval)
             timer = timer + temp_wait_interval
