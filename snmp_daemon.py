@@ -218,8 +218,9 @@ class snmpDaemon(Thread):
                 table: Table = self.request(request_time)
                 self.store_results(table)
                 del table
-        
+
                 relateve_error_interval: int = self.ask_interval
+                count_errors = 0
 
             except Exception as e:
                 logger.error(f"Error occure: {e}")
@@ -234,7 +235,7 @@ class snmpDaemon(Thread):
                     logger.error("Too many errors")
                     self._stop_event.set()
                     break
-            
+
             # время окончания запроса
             end_time = datetime.utcnow()
             timer = int((end_time - request_time).total_seconds())
