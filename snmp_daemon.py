@@ -231,10 +231,8 @@ class snmpDaemon(Thread):
                 self.store_results(table)
                 del table
 
-                if count_errors == 30:
+                if count_errors % 10 == 0:
                     logger.error("Too many errors")
-                    self._stop_event.set()
-                    break
 
             # время окончания запроса
             end_time = datetime.utcnow()
